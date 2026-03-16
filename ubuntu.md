@@ -122,11 +122,19 @@ Agrega a `~/.bashrc`:
 export SPARK_HOME=/opt/spark-3.5.8
 export PATH="$SPARK_HOME/bin:$PATH"
 ```
-```
 Aplica cambios:
 ```bash
 source ~/.zshrc
 ```
+
+## Una sola linea con ZSH
+
+```
+echo 'export SPARK_HOME=/opt/spark-3.5.8; export PATH="$SPARK_HOME/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+
+```
+
+
 
 Nota: `brew install spark` no instala Apache Spark (es otro paquete), por eso se usa el tarball oficial.
 
