@@ -40,6 +40,14 @@ Aplica cambios:
 source ~/.bashrc
 ```
 
+## 2.1) ZSH 
+
+```bash
+echo 'export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export HADOOP_HOME=/opt/hadoop
+export PATH="$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+```
+
 ## 3) Configurar HDFS en pseudo‑distribuido
 Crea carpetas de datos:
 ```bash
