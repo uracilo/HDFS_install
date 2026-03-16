@@ -49,6 +49,12 @@ export PATH="$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH"' >> ~/.zshrc && source ~/
 ```
 
 ## 3) Configurar HDFS en pseudo‑distribuido
+```bash
+mkdir -p /tmp/hadoop-$USER/dfs/name /tmp/hadoop-$USER/dfs/data && printf '<configuration>\n  <property>\n    <name>fs.defaultFS</name>\n    <value>hdfs://localhost:9000</value>\n  </property>\n</configuration>\n' > $HADOOP_HOME/etc/hadoop/core-site.xml && printf '<configuration>\n  <property>\n    <name>dfs.replication</name>\n    <value>1</value>\n  </property>\n  <property>\n    <name>dfs.namenode.name.dir</name>\n    <value>file:/tmp/hadoop-$USER/dfs/name</value>\n  </property>\n  <property>\n    <name>dfs.datanode.data.dir</name>\n    <value>file:/tmp/hadoop-$USER/dfs/data</value>\n  </property>\n</configuration>\n' > $HADOOP_HOME/etc/hadoop/hdfs-site.xml && sed -i 's|^# export JAVA_HOME.*|export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64|' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+```
+
+
+
 Crea carpetas de datos:
 ```bash
 mkdir -p /tmp/hadoop-$USER/dfs/name
