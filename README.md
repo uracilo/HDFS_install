@@ -24,7 +24,7 @@ Ejemplo con `pyenv`:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install jupyter pyspark==4.1.2
+pip install --no-cache-dir jupyter pyspark==4.1.2
 ```
 
 Asegura que el kernel de Jupyter use ese mismo entorno (paso 8).
