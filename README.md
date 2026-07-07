@@ -22,9 +22,7 @@ La versión de PySpark (`pip`) debe coincidir con la de Spark (`SPARK_HOME`).
 
 Ejemplo con `pyenv`:
 ```bash
-pyenv install 3.14.4
-pyenv local 3.14.4
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install jupyter pyspark==4.1.2
 ```
