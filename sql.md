@@ -1,6 +1,10 @@
 # 🧩 Configuración del Driver JDBC de MySQL para Spark
 
-Este documento explica cómo descargar y configurar el driver JDBC necesario para conectar **Apache Spark** con **MySQL**.
+Este documento explica cómo descargar y configurar el driver JDBC necesario para conectar **Apache Spark 4.1.2** con **MySQL**.
+
+Requiere el stack del curso: **Java 17**, **Spark/PySpark 4.1.2** y **Python 3.14** (ver [`README.md`](README.md) o [`ubuntu.md`](ubuntu.md)).
+
+Para instalar MySQL local y crear la base de prueba del curso, ver [`mysql.md`](mysql.md).
 
 ---
 

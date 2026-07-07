@@ -10,14 +10,31 @@ Spark debe ser build para la misma familia mayor de Hadoop:
 
 Este setup usa:
 - Hadoop 3.4.2
-- Spark 3.5.8 build `hadoop3`
-- PySpark 3.5.8
-- Java 11
+- Spark 4.1.2 build `hadoop3`
+- PySpark 4.1.2
+- Java 17
+- **Python 3.14** (recomendado; ver abajo)
 
-## 1) Instalar Java 11 y descargar Hadoop
+### Python
+PySpark 4.1.2 soporta oficialmente **Python 3.10 a 3.14**. Para este setup se usa **Python 3.14**.
+
+La versión de PySpark (`pip`) debe coincidir con la de Spark (`SPARK_HOME`).
+
+Ejemplo con `pyenv`:
+```bash
+pyenv install 3.14.4
+pyenv local 3.14.4
+python -m venv .venv
+source .venv/bin/activate
+pip install jupyter pyspark==4.1.2
+```
+
+Asegura que el kernel de Jupyter use ese mismo entorno (paso 8).
+
+## 1) Instalar Java 17 y descargar Hadoop
 ```bash
 sudo apt update
-sudo apt install openjdk-11-jdk
+sudo apt install -y openjdk-17-jdk
 ```
 
 Descarga Hadoop 3.4.2:
@@ -31,7 +48,7 @@ sudo mv hadoop-3.4.2 /opt/hadoop
 ## 2) Variables de entorno
 Agrega al final de `~/.bashrc`:
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export HADOOP_HOME=/opt/hadoop
 export PATH="$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH"
 ```
@@ -43,14 +60,14 @@ source ~/.bashrc
 ## 2.1) ZSH 
 
 ```bash
-echo 'export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+echo 'export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export HADOOP_HOME=/opt/hadoop
 export PATH="$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 ```
 
 ## 3) Configurar HDFS en pseudo‑distribuido
 ```bash
-mkdir -p /tmp/hadoop-$USER/dfs/name /tmp/hadoop-$USER/dfs/data && printf '<configuration>\n  <property>\n    <name>fs.defaultFS</name>\n    <value>hdfs://localhost:9000</value>\n  </property>\n</configuration>\n' > $HADOOP_HOME/etc/hadoop/core-site.xml && printf '<configuration>\n  <property>\n    <name>dfs.replication</name>\n    <value>1</value>\n  </property>\n  <property>\n    <name>dfs.namenode.name.dir</name>\n    <value>file:/tmp/hadoop-$USER/dfs/name</value>\n  </property>\n  <property>\n    <name>dfs.datanode.data.dir</name>\n    <value>file:/tmp/hadoop-$USER/dfs/data</value>\n  </property>\n</configuration>\n' > $HADOOP_HOME/etc/hadoop/hdfs-site.xml && sed -i 's|^# export JAVA_HOME.*|export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64|' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+mkdir -p /tmp/hadoop-$USER/dfs/name /tmp/hadoop-$USER/dfs/data && printf '<configuration>\n  <property>\n    <name>fs.defaultFS</name>\n    <value>hdfs://localhost:9000</value>\n  </property>\n</configuration>\n' > $HADOOP_HOME/etc/hadoop/core-site.xml && printf '<configuration>\n  <property>\n    <name>dfs.replication</name>\n    <value>1</value>\n  </property>\n  <property>\n    <name>dfs.namenode.name.dir</name>\n    <value>file:/tmp/hadoop-$USER/dfs/name</value>\n  </property>\n  <property>\n    <name>dfs.datanode.data.dir</name>\n    <value>file:/tmp/hadoop-$USER/dfs/data</value>\n  </property>\n</configuration>\n' > $HADOOP_HOME/etc/hadoop/hdfs-site.xml && sed -i 's|^# export JAVA_HOME.*|export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64|' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 ```
 
 
@@ -93,7 +110,7 @@ Edita los archivos en `"$HADOOP_HOME/etc/hadoop"`.
 
 En `hadoop-env.sh` agrega o reemplaza:
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ```
 
 ## 4) Formatear y levantar HDFS
@@ -109,17 +126,17 @@ hdfs dfs -ls /
 ```
 
 ## 5) Instalar Spark compatible con Hadoop 3
-Descarga e instala Spark 3.5.8 build Hadoop 3:
+Descarga e instala Spark 4.1.2 build Hadoop 3:
 ```bash
 cd ~/Downloads
-wget https://downloads.apache.org/spark/spark-3.5.8/spark-3.5.8-bin-hadoop3.tgz
-tar xzvf spark-3.5.8-bin-hadoop3.tgz
-sudo mv spark-3.5.8-bin-hadoop3 /opt/spark-3.5.8
+wget https://downloads.apache.org/spark/spark-4.1.2/spark-4.1.2-bin-hadoop3.tgz
+tar xzvf spark-4.1.2-bin-hadoop3.tgz
+sudo mv spark-4.1.2-bin-hadoop3 /opt/spark-4.1.2
 ```
 
 Agrega a `~/.bashrc`:
 ```bash
-export SPARK_HOME=/opt/spark-3.5.8
+export SPARK_HOME=/opt/spark-4.1.2
 export PATH="$SPARK_HOME/bin:$PATH"
 ```
 Aplica cambios:
@@ -130,7 +147,7 @@ source ~/.zshrc
 ## Una sola linea con ZSH
 
 ```
-echo 'export SPARK_HOME=/opt/spark-3.5.8; export PATH="$SPARK_HOME/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+echo 'export SPARK_HOME=/opt/spark-4.1.2; export PATH="$SPARK_HOME/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 
 ```
 
@@ -139,19 +156,22 @@ echo 'export SPARK_HOME=/opt/spark-3.5.8; export PATH="$SPARK_HOME/bin:$PATH"' >
 Nota: `brew install spark` no instala Apache Spark (es otro paquete), por eso se usa el tarball oficial.
 
 ## 6) Instalar PySpark para el notebook
-En el mismo entorno de Python que usa Jupyter:
+En el mismo entorno de Python 3.14 que usa Jupyter:
 ```bash
-PYSPARK_HADOOP_VERSION=3 pip install pyspark==3.5.8
+PYSPARK_HADOOP_VERSION=3 pip install pyspark==4.1.2
 ```
 
 ## 7) Validaciones rápidas
 ```bash
+python3 --version
+java -version
 python3 -c "import pyspark; print(pyspark.__version__)"
 hdfs dfs -mkdir -p /tmp/ecommerce_bigdata/raw/customers
 hdfs dfs -ls /tmp/ecommerce_bigdata/raw
 ```
 
 ## 8) Tips de ejecución en curso
-- Asegura que el kernel de Jupyter use el mismo Python donde instalaste PySpark.
+- Asegura que el kernel de Jupyter use Python 3.14 donde instalaste PySpark.
 - Si `hdfs` no aparece, revisa que `HADOOP_HOME/bin` esté en `PATH`.
-- Si Spark no arranca, revisa `JAVA_HOME` y la versión de Java.
+- Si Spark no arranca, revisa que `JAVA_HOME` apunte a Java 17 (Spark 4.x no usa Java 11).
+- PySpark y `SPARK_HOME` deben ser la misma versión (4.1.2).
