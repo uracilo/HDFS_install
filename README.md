@@ -149,11 +149,14 @@ curl https://pyenv.run | bash
 Agregar al archivo `~/.zshrc`:
 
 ```bash
+cat >> ~/.zshrc <<'EOF'
+
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
+EOF
 ```
 
 Aplicar cambios:
