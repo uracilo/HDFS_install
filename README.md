@@ -322,7 +322,7 @@ spark-course
 ## 1) Instalar Java 17 y Hadoop
 
 ```bash
-brew install openjdk@17 hadoop
+sudo apt install -y openjdk-17-jdk
 ```
 
 ---
