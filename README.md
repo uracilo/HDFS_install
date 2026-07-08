@@ -489,7 +489,7 @@ export PATH="$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
 
 export PYSPARK_PYTHON=$HOME/.pyenv/versions/spark-course/bin/python
 export PYSPARK_DRIVER_PYTHON=$HOME/.pyenv/versions/spark-course/bin/python
-
+EOF
 ```
 
 Aplicar cambios:
