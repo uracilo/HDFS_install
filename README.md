@@ -1,120 +1,40 @@
-# HDFS + Spark en macOS / Linux Ubuntu
+# HDFS + Spark + PySpark en Ubuntu
 
 ## Objetivo
 
-Este documento deja un setup compatible de **HDFS + Spark + PySpark** para ejecutar el notebook:
-
-```text
-ecommerce_spark_hadoop_exercise.ipynb
-```
-
-usando **HDFS real**, sin fallback a filesystem local.
-
-El objetivo del entorno es tener una combinación estable para curso de Big Data:
+Configurar un entorno de curso en **Ubuntu** para trabajar con:
 
 - Java 17
-- Hadoop 3.x
+- Hadoop 3.x / HDFS
 - Spark 4.1.2
 - PySpark 4.1.2
-- Python 3.12
+- Python 3.12.11
+- Jupyter Notebook / JupyterLab
+
+Este setup permite ejecutar notebooks de PySpark usando un entorno aislado llamado:
+
+```text
+spark-course
+```
 
 ---
 
-## Problema detectado
-
-Inicialmente se intentó instalar:
-
-```bash
-pip install --no-cache-dir jupyter pyspark==4.1.2
-```
-
-pero fallaba con:
+## Stack recomendado
 
 ```text
-error: [Errno 122] Disk quota exceeded
-```
-
-Aunque el sistema todavía tenía espacio disponible:
-
-```text
-/dev/root  61G  8.9G  53G free
-```
-
-Después de revisar:
-
-```bash
-df -h
-du -sh ~
-quota
-python --version
-```
-
-se detectó que el problema no era el disco principal.
-
-Había dos factores importantes:
-
-1. El entorno estaba usando **Python 3.14**, lo cual complicaba la instalación de PySpark en ese ambiente.
-2. El directorio temporal `/tmp` estaba montado como `tmpfs` con poco espacio disponible, por ejemplo:
-
-```text
-tmpfs  2.0G  /tmp
-```
-
-PySpark es un paquete grande porque incluye muchos archivos JAR de Spark. Durante la instalación, `pip` usa directorios temporales para desempaquetar y preparar el paquete. Por eso, aunque el disco principal tuviera espacio libre, la instalación podía fallar por el tamaño limitado de `/tmp`.
-
-La solución fue usar una combinación más estable:
-
-```text
+Ubuntu
 Python 3.12.11
 Java 17
 Hadoop 3.x
 Spark 4.1.2
 PySpark 4.1.2
-```
-
-y forzar a `pip` a usar un directorio temporal dentro del home:
-
-```bash
-TMPDIR=$HOME/tmp \
-PIP_CACHE_DIR=$HOME/.cache/pip \
-python -m pip install --no-cache-dir pyspark==4.1.2
+Jupyter
+ipykernel
 ```
 
 ---
 
-## Compatibilidad
-
-Spark debe estar compilado para la misma familia mayor de Hadoop:
-
-```text
-Hadoop 3.x ↔ Spark build hadoop3
-Hadoop 2.x ↔ Spark build hadoop2.7
-```
-
-Este setup usa:
-
-```text
-Hadoop 3.x
-Spark 4.1.2 build hadoop3
-PySpark 4.1.2
-Java 17
-Python 3.12.11
-```
-
-La versión de PySpark instalada con `pip` debe coincidir con la versión de Spark que se usará en el curso.
-
-Ejemplo:
-
-```text
-Spark 4.1.2
-PySpark 4.1.2
-```
-
----
-
-# Parte A: Setup en Ubuntu / Linux
-
-## 1) Instalar dependencias del sistema
+# 1. Instalar dependencias base
 
 ```bash
 sudo apt update
@@ -123,6 +43,8 @@ sudo apt install -y \
 build-essential \
 curl \
 git \
+wget \
+tar \
 libssl-dev \
 zlib1g-dev \
 libbz2-dev \
@@ -140,10 +62,40 @@ ca-certificates
 
 ---
 
-## 2) Instalar pyenv
+# 2. Instalar Java 17
 
 ```bash
-curl https://pyenv.run | bash
+sudo apt install -y openjdk-17-jdk
+```
+
+Validar:
+
+```bash
+java -version
+```
+
+La salida debe mostrar Java 17.
+
+Ejemplo:
+
+```text
+openjdk version "17..."
+```
+
+---
+
+# 3. Configurar `JAVA_HOME`
+
+Buscar la ruta de Java:
+
+```bash
+readlink -f $(which java)
+```
+
+Normalmente en Ubuntu será algo como:
+
+```text
+/usr/lib/jvm/java-17-openjdk-amd64/bin/java
 ```
 
 Agregar al archivo `~/.zshrc`:
@@ -151,6 +103,39 @@ Agregar al archivo `~/.zshrc`:
 ```bash
 cat >> ~/.zshrc <<'EOF'
 
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export PATH="$JAVA_HOME/bin:$PATH"
+
+EOF
+```
+
+
+
+Aplicar cambios:
+
+```bash
+source ~/.zshrc
+```
+
+Validar:
+
+```bash
+echo $JAVA_HOME
+java -version
+```
+
+---
+
+# 4. Instalar `pyenv`
+
+```bash
+curl https://pyenv.run | bash
+```
+
+Agregar al final de `~/.zshrc`:
+
+```bash
+cat >> ~/.zshrc <<'EOF'
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 
@@ -173,16 +158,10 @@ pyenv --version
 
 ---
 
-## 3) Instalar Python 3.12
+# 5. Instalar Python 3.12.11
 
 ```bash
 pyenv install 3.12.11
-```
-
-Esto instala Python en una ruta similar a:
-
-```text
-/home/ubuntu/.pyenv/versions/3.12.11
 ```
 
 Validar:
@@ -191,9 +170,17 @@ Validar:
 pyenv versions
 ```
 
+Debe aparecer:
+
+```text
+3.12.11
+```
+
 ---
 
-## 4) Crear entorno aislado para Spark
+# 6. Crear entorno virtual para el curso
+
+Crear el entorno:
 
 ```bash
 pyenv virtualenv 3.12.11 spark-course
@@ -212,7 +199,7 @@ which python
 python --version
 ```
 
-La salida esperada debe parecerse a esto:
+La salida esperada debe parecerse a:
 
 ```text
 /home/ubuntu/.pyenv/versions/spark-course/bin/python
@@ -221,41 +208,27 @@ Python 3.12.11
 
 ---
 
-## 5) Instalar Jupyter, ipykernel y PySpark
+# 7. Instalar Jupyter e ipykernel
 
 Con el entorno `spark-course` activado:
 
 ```bash
-pyenv activate spark-course
-```
-
-Validar de nuevo que se está usando el Python correcto:
-
-```bash
-which python
-python --version
-```
-
-Actualizar `pip`:
-
-```bash
 python -m pip install --upgrade pip
-```
-
-Instalar Jupyter e ipykernel:
-
-```bash
 python -m pip install jupyter ipykernel
 ```
 
-Crear carpetas temporales para evitar errores de espacio o cuota durante la instalación de PySpark:
+---
+
+# 8. Instalar PySpark 4.1.2
+
+Crear carpetas temporales dentro del home:
 
 ```bash
 mkdir -p ~/tmp
 mkdir -p ~/.cache/pip
 ```
 
-Instalar PySpark usando `~/tmp` como directorio temporal, en lugar de `/tmp`:
+Instalar PySpark usando `~/tmp` como directorio temporal:
 
 ```bash
 TMPDIR=$HOME/tmp \
@@ -263,7 +236,7 @@ PIP_CACHE_DIR=$HOME/.cache/pip \
 python -m pip install --no-cache-dir pyspark==4.1.2
 ```
 
-Validar que PySpark quedó instalado correctamente:
+Validar:
 
 ```bash
 python -c "import pyspark; print(pyspark.__version__)"
@@ -277,7 +250,9 @@ La salida esperada es:
 
 ---
 
-## 6) Registrar kernel en Jupyter
+# 9. Registrar kernel de Jupyter
+
+Con el entorno `spark-course` activado:
 
 ```bash
 python -m ipykernel install \
@@ -286,7 +261,19 @@ python -m ipykernel install \
 --display-name "Python 3.12 (Spark)"
 ```
 
-Después, en Jupyter, seleccionar el kernel:
+Validar kernels disponibles:
+
+```bash
+jupyter kernelspec list
+```
+
+Debe aparecer:
+
+```text
+spark-course
+```
+
+En Jupyter seleccionar el kernel:
 
 ```text
 Python 3.12 (Spark)
@@ -294,47 +281,41 @@ Python 3.12 (Spark)
 
 ---
 
-## 7) Validaciones rápidas del entorno Python
+# 10. Instalar Hadoop 3.x
+
+Crear carpeta de trabajo:
 
 ```bash
-pyenv activate spark-course
-
-which python
-python --version
-
-python -m pip --version
-python -c "import pyspark; print(pyspark.__version__)"
-jupyter kernelspec list
+mkdir -p ~/opt
+cd ~/opt
 ```
 
-Salidas esperadas:
-
-```text
-Python 3.12.11
-4.1.2
-spark-course
-```
-
----
-
-# Parte B: Setup en macOS
-
-## 1) Instalar Java 17 y Hadoop
+Descargar Hadoop 3.4.2:
 
 ```bash
-sudo apt install -y openjdk-17-jdk
+wget https://downloads.apache.org/hadoop/common/hadoop-3.4.2/hadoop-3.4.2.tar.gz
 ```
 
----
-
-## 2) Variables de entorno
-
-Agregar al final de `~/.zshrc`:
+Descomprimir:
 
 ```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-export HADOOP_HOME="$(brew --prefix hadoop)/libexec"
+tar -xzf hadoop-3.4.2.tar.gz
+```
+
+Crear alias de carpeta:
+
+```bash
+ln -sfn ~/opt/hadoop-3.4.2 ~/opt/hadoop
+```
+
+Agregar variables al archivo `~/.zshrc`:
+
+```bash
+cat >> ~/.zshrc <<'EOF'
+export HADOOP_HOME=$HOME/opt/hadoop
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
 export PATH="$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH"
+EOF
 ```
 
 Aplicar cambios:
@@ -346,30 +327,36 @@ source ~/.zshrc
 Validar:
 
 ```bash
-java -version
 hadoop version
 ```
 
 ---
 
-## 3) Configurar HDFS en pseudo-distribuido
+# 11. Configurar Hadoop para HDFS local
 
-Crear carpetas de datos:
+Editar:
 
 ```bash
-mkdir -p /tmp/hadoop-$USER/dfs/name
-mkdir -p /tmp/hadoop-$USER/dfs/data
+nano $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 ```
 
-Editar los archivos en:
+Agregar o reemplazar:
 
 ```bash
-"$HADOOP_HOME/etc/hadoop"
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ```
 
 ---
 
-### `core-site.xml`
+## `core-site.xml`
+
+Editar:
+
+```bash
+nano $HADOOP_HOME/etc/hadoop/core-site.xml
+```
+
+Contenido:
 
 ```xml
 <configuration>
@@ -382,7 +369,22 @@ Editar los archivos en:
 
 ---
 
-### `hdfs-site.xml`
+## `hdfs-site.xml`
+
+Crear carpetas para NameNode y DataNode:
+
+```bash
+mkdir -p /tmp/hadoop-$USER/dfs/name
+mkdir -p /tmp/hadoop-$USER/dfs/data
+```
+
+Editar:
+
+```bash
+nano $HADOOP_HOME/etc/hadoop/hdfs-site.xml
+```
+
+Contenido:
 
 ```xml
 <configuration>
@@ -405,25 +407,17 @@ Editar los archivos en:
 
 ---
 
-### `hadoop-env.sh`
+# 12. Formatear HDFS
 
-Agregar o reemplazar:
-
-```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-```
-
----
-
-## 4) Formatear y levantar HDFS
-
-Formatear el NameNode:
+Solo se hace la primera vez:
 
 ```bash
 hdfs namenode -format
 ```
 
-Levantar NameNode y DataNode:
+---
+
+# 13. Levantar HDFS
 
 ```bash
 hdfs --daemon start namenode
@@ -436,7 +430,7 @@ Validar procesos:
 jps
 ```
 
-Deberías ver algo parecido a:
+Debe aparecer algo parecido a:
 
 ```text
 NameNode
@@ -445,251 +439,6 @@ Jps
 ```
 
 Validar HDFS:
-
-```bash
-hdfs dfs -ls /
-```
-
-Si no existe nada todavía, puedes crear una carpeta de prueba:
-
-```bash
-hdfs dfs -mkdir -p /tmp/ecommerce_bigdata/raw/customers
-hdfs dfs -ls /tmp/ecommerce_bigdata/raw
-```
-
----
-
-## 5) Instalar Spark compatible con Hadoop 3
-
-Descargar Spark 4.1.2 build Hadoop 3:
-
-```bash
-cd ~/Downloads
-curl -O https://downloads.apache.org/spark/spark-4.1.2/spark-4.1.2-bin-hadoop3.tgz
-tar xzvf spark-4.1.2-bin-hadoop3.tgz
-mkdir -p ~/opt
-mv spark-4.1.2-bin-hadoop3 ~/opt/spark-4.1.2
-```
-
-Agregar a `~/.zshrc`:
-
-```bash
-export SPARK_HOME=~/opt/spark-4.1.2
-export PATH="$SPARK_HOME/bin:$PATH"
-```
-
-Aplicar cambios:
-
-```bash
-source ~/.zshrc
-```
-
-Validar:
-
-```bash
-spark-submit --version
-```
-
-Nota:
-
-```bash
-brew install spark
-```
-
-no instala Apache Spark como se necesita para este setup. Por eso se usa el tarball oficial.
-
----
-
-## 6) Instalar Python 3.12 con pyenv en macOS
-
-Instalar `pyenv` y `pyenv-virtualenv`:
-
-```bash
-brew install pyenv pyenv-virtualenv
-```
-
-Agregar al final de `~/.zshrc`:
-
-```bash
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
-```
-
-Aplicar cambios:
-
-```bash
-source ~/.zshrc
-```
-
-Instalar Python 3.12:
-
-```bash
-pyenv install 3.12.11
-```
-
-Crear entorno:
-
-```bash
-pyenv virtualenv 3.12.11 spark-course
-```
-
-Activar entorno:
-
-```bash
-pyenv activate spark-course
-```
-
-Validar:
-
-```bash
-which python
-python --version
-```
-
----
-
-## 7) Instalar Jupyter, ipykernel y PySpark en macOS
-
-Con el entorno `spark-course` activado:
-
-```bash
-python -m pip install --upgrade pip
-python -m pip install jupyter ipykernel
-```
-
-Crear carpetas temporales:
-
-```bash
-mkdir -p ~/tmp
-mkdir -p ~/.cache/pip
-```
-
-Instalar PySpark:
-
-```bash
-TMPDIR=$HOME/tmp \
-PIP_CACHE_DIR=$HOME/.cache/pip \
-python -m pip install --no-cache-dir pyspark==4.1.2
-```
-
-Validar:
-
-```bash
-python -c "import pyspark; print(pyspark.__version__)"
-```
-
-Registrar kernel:
-
-```bash
-python -m ipykernel install \
---user \
---name spark-course \
---display-name "Python 3.12 (Spark)"
-```
-
----
-
-# Parte C: Configuración de HDFS en Linux / Ubuntu
-
-Si se usará Hadoop en Linux, configurar variables de entorno en `~/.zshrc`.
-
-Ejemplo:
-
-```bash
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-export HADOOP_HOME=$HOME/hadoop
-export PATH="$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH"
-```
-
-Si Hadoop se instaló en otra ruta, ajustar `HADOOP_HOME`.
-
-Aplicar cambios:
-
-```bash
-source ~/.zshrc
-```
-
-Validar:
-
-```bash
-java -version
-hadoop version
-```
-
----
-
-## Configurar HDFS en pseudo-distribuido en Linux
-
-Crear carpetas:
-
-```bash
-mkdir -p /tmp/hadoop-$USER/dfs/name
-mkdir -p /tmp/hadoop-$USER/dfs/data
-```
-
-Editar:
-
-```bash
-$HADOOP_HOME/etc/hadoop/core-site.xml
-$HADOOP_HOME/etc/hadoop/hdfs-site.xml
-$HADOOP_HOME/etc/hadoop/hadoop-env.sh
-```
-
-### `core-site.xml`
-
-```xml
-<configuration>
-  <property>
-    <name>fs.defaultFS</name>
-    <value>hdfs://localhost:9000</value>
-  </property>
-</configuration>
-```
-
-### `hdfs-site.xml`
-
-```xml
-<configuration>
-  <property>
-    <name>dfs.replication</name>
-    <value>1</value>
-  </property>
-
-  <property>
-    <name>dfs.namenode.name.dir</name>
-    <value>file:/tmp/hadoop-${user.name}/dfs/name</value>
-  </property>
-
-  <property>
-    <name>dfs.datanode.data.dir</name>
-    <value>file:/tmp/hadoop-${user.name}/dfs/data</value>
-  </property>
-</configuration>
-```
-
-### `hadoop-env.sh`
-
-Ejemplo en Ubuntu:
-
-```bash
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-```
-
----
-
-## Formatear y levantar HDFS
-
-```bash
-hdfs namenode -format
-hdfs --daemon start namenode
-hdfs --daemon start datanode
-jps
-```
-
-Verificar:
 
 ```bash
 hdfs dfs -ls /
@@ -704,37 +453,203 @@ hdfs dfs -ls /tmp/ecommerce_bigdata/raw
 
 ---
 
-# Parte D: Variables de entorno recomendadas
+# 14. Instalar Spark 4.1.2 compatible con Hadoop 3
 
-Agregar al final de `~/.zshrc`:
+Ir a la carpeta de trabajo:
 
 ```bash
+mkdir -p ~/opt
+cd ~/opt
+```
+
+Descargar Spark 4.1.2 para Hadoop 3:
+
+```bash
+wget https://downloads.apache.org/spark/spark-4.1.2/spark-4.1.2-bin-hadoop3.tgz
+```
+
+Descomprimir:
+
+```bash
+tar -xzf spark-4.1.2-bin-hadoop3.tgz
+```
+
+Crear alias de carpeta:
+
+```bash
+ln -sfn ~/opt/spark-4.1.2-bin-hadoop3 ~/opt/spark-4.1.2
+```
+
+Agregar variables al archivo `~/.zshrc`:
+
+```bash
+cat >> ~/.zshrc <<'EOF'
 export SPARK_HOME=$HOME/opt/spark-4.1.2
-export PATH="$SPARK_HOME/bin:$PATH"
+export PATH="$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
 
 export PYSPARK_PYTHON=$HOME/.pyenv/versions/spark-course/bin/python
 export PYSPARK_DRIVER_PYTHON=$HOME/.pyenv/versions/spark-course/bin/python
+
 ```
 
-Aplicar:
+Aplicar cambios:
 
 ```bash
 source ~/.zshrc
 ```
 
-Validar:
+Validar Spark:
 
 ```bash
-echo $SPARK_HOME
-echo $PYSPARK_PYTHON
-echo $PYSPARK_DRIVER_PYTHON
+spark-submit --version
+```
+
+Debe mostrar Spark 4.1.2.
+
+---
+
+# 15. Validaciones finales
+
+Activar entorno:
+
+```bash
+pyenv activate spark-course
+```
+
+Validar Python:
+
+```bash
+which python
+python --version
+```
+
+Validar PySpark:
+
+```bash
+python -c "import pyspark; print(pyspark.__version__)"
+```
+
+Validar Java:
+
+```bash
+java -version
+```
+
+Validar Hadoop:
+
+```bash
+hadoop version
+```
+
+Validar HDFS:
+
+```bash
+hdfs dfs -ls /
+```
+
+Validar Spark:
+
+```bash
+spark-submit --version
+```
+
+Validar kernel de Jupyter:
+
+```bash
+jupyter kernelspec list
 ```
 
 ---
 
-# Parte E: Uso en Jupyter
+# 16. Probar PySpark básico
 
-Levantar Jupyter:
+Ejecutar:
+
+```bash
+python
+```
+
+Dentro de Python:
+
+```python
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder \
+    .appName("SparkCourseTest") \
+    .master("local[*]") \
+    .getOrCreate()
+
+data = [("Ana", 10), ("Luis", 20), ("Marta", 30)]
+df = spark.createDataFrame(data, ["name", "value"])
+
+df.show()
+
+spark.stop()
+```
+
+Salida esperada:
+
+```text
++-----+-----+
+| name|value|
++-----+-----+
+|  Ana|   10|
+| Luis|   20|
+|Marta|   30|
++-----+-----+
+```
+
+---
+
+# 17. Probar escritura en HDFS desde Spark
+
+Crear carpeta en HDFS:
+
+```bash
+hdfs dfs -mkdir -p /tmp/spark_test
+```
+
+Ejecutar Python:
+
+```bash
+python
+```
+
+Dentro de Python:
+
+```python
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder \
+    .appName("SparkHDFSTest") \
+    .master("local[*]") \
+    .getOrCreate()
+
+data = [("A", 1), ("B", 2), ("C", 3)]
+df = spark.createDataFrame(data, ["letter", "number"])
+
+df.write.mode("overwrite").parquet("hdfs://localhost:9000/tmp/spark_test/output_parquet")
+
+spark.stop()
+```
+
+Validar en HDFS:
+
+```bash
+hdfs dfs -ls /tmp/spark_test/output_parquet
+```
+
+---
+
+# 18. Usar Jupyter
+
+Activar entorno:
+
+```bash
+pyenv activate spark-course
+```
+
+Abrir Jupyter:
 
 ```bash
 jupyter notebook
@@ -746,7 +661,7 @@ o:
 jupyter lab
 ```
 
-Abrir el notebook:
+Abrir el notebook del curso:
 
 ```text
 ecommerce_spark_hadoop_exercise.ipynb
@@ -760,39 +675,9 @@ Python 3.12 (Spark)
 
 ---
 
-# Parte F: Validaciones completas
+# 19. Solución a errores comunes
 
-Ejecutar:
-
-```bash
-pyenv activate spark-course
-
-which python
-python --version
-
-java -version
-hadoop version
-spark-submit --version
-
-python -c "import pyspark; print(pyspark.__version__)"
-
-hdfs dfs -mkdir -p /tmp/ecommerce_bigdata/raw/customers
-hdfs dfs -ls /tmp/ecommerce_bigdata/raw
-```
-
-Versiones esperadas:
-
-```text
-Python 3.12.11
-Java 17
-Hadoop 3.x
-Spark 4.1.2
-PySpark 4.1.2
-```
-
----
-
-# Solución al error `externally-managed-environment`
+## Error: `externally-managed-environment`
 
 Si aparece:
 
@@ -800,15 +685,9 @@ Si aparece:
 error: externally-managed-environment
 ```
 
-durante una instalación con `pip`, significa que se está usando el Python del sistema administrado por Ubuntu/Debian, no el Python del entorno `spark-course`.
+significa que se está usando el Python del sistema, no el entorno `spark-course`.
 
-No usar:
-
-```bash
-pip install --break-system-packages ...
-```
-
-La solución correcta es activar el entorno y usar `python -m pip`:
+Solución:
 
 ```bash
 pyenv activate spark-course
@@ -817,32 +696,38 @@ which python
 python --version
 
 python -m pip install --upgrade pip
-python -m pip install jupyter ipykernel
 ```
 
-La ruta correcta debe parecerse a:
+No usar:
 
-```text
-/home/ubuntu/.pyenv/versions/spark-course/bin/python
+```bash
+pip install --break-system-packages
 ```
 
 ---
 
-# Solución al error `No matching distribution found for pyspark`
+## Error: `Disk quota exceeded`
 
-Si se ejecuta:
-
-```bash
-python -m pip install --only-binary=:all: pyspark
-```
-
-puede aparecer:
+Si aparece:
 
 ```text
-ERROR: No matching distribution found for pyspark
+error: [Errno 122] Disk quota exceeded
 ```
 
-Esto pasa porque PySpark no siempre se distribuye como wheel/binario compatible para este entorno.
+durante la instalación de PySpark, instalar usando un directorio temporal en el home:
+
+```bash
+mkdir -p ~/tmp
+mkdir -p ~/.cache/pip
+
+TMPDIR=$HOME/tmp \
+PIP_CACHE_DIR=$HOME/.cache/pip \
+python -m pip install --no-cache-dir pyspark==4.1.2
+```
+
+---
+
+## Error: `No matching distribution found for pyspark`
 
 No usar:
 
@@ -860,47 +745,24 @@ python -m pip install --no-cache-dir pyspark==4.1.2
 
 ---
 
-# Solución al error `Disk quota exceeded`
+## Error: `ModuleNotFoundError: No module named 'pyspark'`
 
-Si aparece:
-
-```text
-error: [Errno 122] Disk quota exceeded
-```
-
-durante:
+Validar que el entorno correcto está activo:
 
 ```bash
-python -m pip install pyspark==4.1.2
-```
-
-no asumir inmediatamente que falta disco.
-
-Revisar primero:
-
-```bash
-df -h
-df -ih
-echo $TMPDIR
-ulimit -a
-python --version
+pyenv activate spark-course
 which python
+python --version
 ```
 
-Si `/tmp` aparece como `tmpfs` con poco espacio, por ejemplo:
-
-```text
-tmpfs  2.0G  /tmp
-```
-
-crear un temporal dentro del home:
+Luego validar instalación:
 
 ```bash
-mkdir -p ~/tmp
-mkdir -p ~/.cache/pip
+python -m pip show pyspark
+python -c "import pyspark; print(pyspark.__version__)"
 ```
 
-e instalar así:
+Si no aparece instalado:
 
 ```bash
 TMPDIR=$HOME/tmp \
@@ -910,9 +772,7 @@ python -m pip install --no-cache-dir pyspark==4.1.2
 
 ---
 
-# Comandos finales recomendados
-
-Esta fue la secuencia que resolvió el problema:
+# 20. Comandos finales resumidos
 
 ```bash
 pyenv activate spark-course
@@ -936,48 +796,38 @@ python -m ipykernel install \
 --user \
 --name spark-course \
 --display-name "Python 3.12 (Spark)"
+
+jupyter kernelspec list
 ```
 
 ---
 
 # Estado esperado final
 
-Al terminar, debes tener:
+Al terminar, el entorno debe tener:
 
 ```text
-Python 3.12.11 activo en el entorno spark-course
-Jupyter instalado
-ipykernel instalado
-PySpark 4.1.2 instalado
-Kernel de Jupyter registrado como Python 3.12 (Spark)
-Java 17 funcionando
-Hadoop 3.x funcionando
-HDFS levantado en localhost:9000
-Spark 4.1.2 build hadoop3 instalado
+Ubuntu
+Java 17
+Hadoop 3.x
+HDFS funcionando en hdfs://localhost:9000
+Spark 4.1.2
+PySpark 4.1.2
+Python 3.12.11
+Jupyter
+Kernel Python 3.12 (Spark)
 ```
 
-Validaciones finales:
+Validación mínima final:
 
 ```bash
 pyenv activate spark-course
 
-which python
 python --version
-
 python -c "import pyspark; print(pyspark.__version__)"
+java -version
+hadoop version
+spark-submit --version
+hdfs dfs -ls /
 jupyter kernelspec list
-```
-
-Salidas esperadas:
-
-```text
-Python 3.12.11
-4.1.2
-spark-course
-```
-
-Después de esto ya se puede continuar con:
-
-```text
-HDFS + Spark + notebook ecommerce_spark_hadoop_exercise.ipynb
 ```
